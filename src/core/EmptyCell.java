@@ -1,9 +1,5 @@
 package core;
 
-/**
- * EmptyCell — Boş (doldurulmamış) hücre.
- * Cell hiyerarşisinin temel somut uygulamasıdır.
- */
 public class EmptyCell extends Cell {
 
     public EmptyCell() {
@@ -17,8 +13,8 @@ public class EmptyCell extends Cell {
     public int getColorId()     { return Cell.COLOR_EMPTY; }
 
     @Override
-    public void activate()      { /* Boş hücrenin davranışı yok */ }
+    public void activate()      {  }
 
     @Override
-    public String render()      { return "  "; }  // iki boşluk
+    public String render()      { return "  "; }  
 }

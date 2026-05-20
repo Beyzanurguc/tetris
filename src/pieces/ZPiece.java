@@ -2,12 +2,6 @@ package pieces;
 
 import core.Cell;
 
-/**
- * ZPiece — Z parçası (Red)
- *
- *  [ ][ ]
- *     [ ][ ]
- */
 public class ZPiece extends AbstractPiece {
 
     public ZPiece() {

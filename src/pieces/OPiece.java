@@ -2,18 +2,10 @@ package pieces;
 
 import core.Cell;
 
-/**
- * OPiece — Kare parça (Yellow)
- *
- *  [ ][ ]
- *  [ ][ ]
- *
- * maxRotations = 1  — kare döndürülmez, rotasyon anlamı yok
- */
 public class OPiece extends AbstractPiece {
 
     public OPiece() {
-        super(1);   // döndürülmez
+        super(1);   
     }
 
     @Override

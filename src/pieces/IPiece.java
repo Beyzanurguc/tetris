@@ -1,15 +1,8 @@
 package pieces;
 
+import core.Board;
 import core.Cell;
 
-/**
- * IPiece — Çubuk parça (Cyan)
- *
- *  [ ][ ][ ][ ]
- *
- * maxRotations = 2  (dikey / yatay — 4'te tekrar aynı forma döner,
- *                    2 yeterli ama 4 de geçerli; tasarım tercihine göre)
- */
 public class IPiece extends AbstractPiece {
 
     public IPiece() {
@@ -25,6 +18,13 @@ public class IPiece extends AbstractPiece {
 
     @Override public int    getColorId()   { return Cell.COLOR_I; }
     @Override public String getPieceName() { return "I"; }
+
+    @Override
+    protected void onLocked(Board board) {
+        System.out.println("[IPiece] onLocked() -> Yatay satir taramasi tetiklendi! "
+                           + "clearLines() cagrilabilir.");
+        board.clearLines();
+    }
 
     @Override
     public Piece clonePiece() {

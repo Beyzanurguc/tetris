@@ -2,13 +2,6 @@ package pieces;
 
 import core.Cell;
 
-/**
- * JPiece — J parçası (Blue)
- *
- *     [ ]
- *     [ ]
- *  [ ][ ]
- */
 public class JPiece extends AbstractPiece {
 
     public JPiece() {

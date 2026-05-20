@@ -2,29 +2,11 @@ package pieces;
 
 import java.util.Scanner;
 
-/**
- * CustomPieceLoader — Kullanıcı Tanımlı Parça Yükleme Modülü.
- *
- * Kullanıcının konsoldan 3'e kadar kendi parça matrisi girmesini sağlar.
- * Her parça için:
- *   1. Satır ve sütun boyutu istenir.
- *   2. Matris satır satır girilir  (0 = boş, 1 = dolu).
- *   3. İzin verilen rotasyon sayısı istenir.
- *   4. Parçaya isim verilir.
- *
- * Üretilen parçalar DynamicArray yerine sabit boyutlu Piece[] dizisinde tutulur
- * (koleksiyon yasağı — maks 3 parça sabit bilindiği için array yeterli).
- *
- * Tasarım Notu:
- *   Bu sınıf bir "Factory" değil, bir "Loader / Builder" rolündedir.
- *   Üretim işini PieceFactory.createCustomPiece()'a devreder.
- */
 public class CustomPieceLoader {
 
     public static final int MAX_CUSTOM_PIECES = 3;
-    public static final int MAX_MATRIX_DIM    = 6;   // max 6×6 matris
+    public static final int MAX_MATRIX_DIM    = 6;   
 
-    // Yüklenen parçalar sabit dizi ile tutulur (koleksiyon yasağı)
     private Piece[] loadedPieces;
     private int     loadedCount;
 
@@ -33,12 +15,6 @@ public class CustomPieceLoader {
         loadedCount  = 0;
     }
 
-    // ---------------------------------------------------------------- API
-
-    /**
-     * Konsoldan etkileşimli parça yükleme.
-     * Kaç parça yükleneceği kullanıcıya sorulur (1-3).
-     */
     public void loadFromConsole() {
         Scanner scanner = new Scanner(System.in);
 
@@ -57,18 +33,9 @@ public class CustomPieceLoader {
             }
         }
 
-        // Scanner kasıtlı kapatılmıyor — System.in'i kapatmamak önemli
         System.out.println("\nToplam yüklenen parça: " + loadedCount);
     }
 
-    /**
-     * Programatik yükleme — test ve entegrasyon için.
-     *
-     * @param matrix       parça formu (0/1 matris)
-     * @param maxRotations rotasyon hakkı
-     * @param name         parça adı
-     * @return true → başarılı, false → kapasite dolu
-     */
     public boolean loadProgrammatically(int[][] matrix, int maxRotations, String name) {
         if (loadedCount >= MAX_CUSTOM_PIECES) {
             System.out.println("[CustomPieceLoader] Kapasite dolu (max " +
@@ -82,7 +49,6 @@ public class CustomPieceLoader {
         return true;
     }
 
-    /** Yüklenen parçaların kopyasını döndür (Prototype) */
     public Piece[] getLoadedPieces() {
         Piece[] result = new Piece[loadedCount];
         for (int i = 0; i < loadedCount; i++) {
@@ -91,7 +57,6 @@ public class CustomPieceLoader {
         return result;
     }
 
-    /** Index'e göre tek parça al (klonlanmış) */
     public Piece getPieceAt(int index) {
         if (index < 0 || index >= loadedCount)
             throw new IndexOutOfBoundsException("Geçersiz parça index: " + index);
@@ -100,30 +65,25 @@ public class CustomPieceLoader {
 
     public int getLoadedCount() { return loadedCount; }
 
-    /** Tüm yüklü parçaları temizle */
     public void clearAll() {
         for (int i = 0; i < loadedCount; i++) {
-            loadedPieces[i] = null;   // bellek temizliği
+            loadedPieces[i] = null;   
         }
         loadedCount = 0;
     }
 
-    // --------------------------------------------------------- private
-
     private Piece loadSinglePiece(Scanner scanner, int slotNo) {
-        // Parça adı
+
         System.out.print("Parça adı: ");
         String name = scanner.nextLine().trim();
         if (name.isEmpty()) name = "Custom" + slotNo;
 
-        // Boyutlar
         System.out.print("Satır sayısı (1-" + MAX_MATRIX_DIM + "): ");
         int rows = readIntInRange(scanner, 1, MAX_MATRIX_DIM);
 
         System.out.print("Sütun sayısı (1-" + MAX_MATRIX_DIM + "): ");
         int cols = readIntInRange(scanner, 1, MAX_MATRIX_DIM);
 
-        // Matris girişi
         int[][] matrix = new int[rows][cols];
         System.out.println("Matrisi girin (satır satır, değerler arası boşluk; 0=boş 1=dolu):");
         for (int r = 0; r < rows; r++) {
@@ -133,14 +93,12 @@ public class CustomPieceLoader {
             }
         }
 
-        // Rotasyon hakkı
         System.out.print("İzin verilen rotasyon sayısı (1-4): ");
         int maxRot = readIntInRange(scanner, 1, 4);
 
         return PieceFactory.createCustomPiece(matrix, maxRot, name);
     }
 
-    /** [min, max] aralığında int oku (hata toleranslı) */
     private int readIntInRange(Scanner scanner, int min, int max) {
         while (true) {
             try {
@@ -160,7 +118,7 @@ public class CustomPieceLoader {
         if (matrix.length > MAX_MATRIX_DIM || matrix[0].length > MAX_MATRIX_DIM)
             throw new IllegalArgumentException("Matris max " + MAX_MATRIX_DIM + "×" +
                                                MAX_MATRIX_DIM + " olabilir");
-        // En az bir dolu hücre olmalı
+
         for (int[] row : matrix)
             for (int cell : row)
                 if (cell != 0) return;

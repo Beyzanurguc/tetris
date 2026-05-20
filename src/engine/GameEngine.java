@@ -8,33 +8,16 @@ import bridge.gravity.GravityAbstraction;
 import bridge.gravity.NormalGravity;
 import bridge.gravity.GravityImplementor;
 import bridge.ThemeManager;
+import behavioral.observer.GameEventPublisher;
+import behavioral.observer.GameEvent;
+import behavioral.state.GameState;
+import behavioral.state.MenuState;
+import behavioral.command.CommandHistory;
 
-/**
- * GameEngine — Oyun Motoru (Singleton Deseni).
- *
- * Singleton Garantisi:
- *   • private static instance — tek kopya
- *   • private constructor    — dışarıdan örnekleme engeli
- *   • static getInstance()   — kontrollü erişim noktası
- *   • Thread-Safety: double-checked locking ile sağlanır
- *
- * Sorumluluklar:
- *   - Board ve aktif parçanın yönetimi
- *   - Oyun döngüsü (tick)
- *   - Skor, seviye, durum
- *   - CustomPieceLoader entegrasyonu
- *   - GravityAbstraction (Bridge) entegrasyonu
- *
- * Behavioral desenler (Strategy, Observer, Command) KULLANILMAZ.
- * Oyun durumu basit boolean bayrakları ile izlenir.
- */
-public class GameEngine {
-
-    // ============================================================ Singleton
+public class GameEngine extends GameEventPublisher {
 
     private static volatile GameEngine instance = null;
 
-    /** Dışarıdan örnekleme engellenir */
     private GameEngine() {
         board             = new Board();
         customPieceLoader = new CustomPieceLoader();
@@ -44,12 +27,12 @@ public class GameEngine {
         gamePaused        = false;
         tickCount         = 0;
         nextPiece         = PieceFactory.createRandomPiece();
+        commandHistory    = new CommandHistory();
+
+        currentState      = new MenuState();
+        currentState.onEnter(this);
     }
 
-    /**
-     * Double-checked locking ile thread-safe Singleton erişimi.
-     * İlk çağrıda instance oluşturulur, sonraki çağrılarda aynı döndürülür.
-     */
     public static GameEngine getInstance() {
         if (instance == null) {
             synchronized (GameEngine.class) {
@@ -61,8 +44,6 @@ public class GameEngine {
         }
         return instance;
     }
-
-    // ============================================================ Alanlar
 
     private final Board               board;
     private final CustomPieceLoader   customPieceLoader;
@@ -76,43 +57,62 @@ public class GameEngine {
     private boolean gamePaused;
     private int     tickCount;
 
-    // ============================================================ Oyun Akışı
+    private GameState currentState;
 
-    /** Yeni oyun başlat */
+    private final CommandHistory commandHistory;
+
+    public void changeState(GameState newState) {
+        if (newState == null) return;
+        System.out.println("[GameEngine] Durum geçişi: " +
+                           currentState.getClass().getSimpleName() +
+                           " → " + newState.getClass().getSimpleName());
+        currentState.onExit(this);
+        currentState = newState;
+        currentState.onEnter(this);
+    }
+
+    public GameState getCurrentState() { return currentState; }
+
+    public CommandHistory getCommandHistory() { return commandHistory; }
+
     public void startGame() {
         board.reset();
         tickCount   = 0;
         gameRunning = true;
         gamePaused  = false;
+        commandHistory.clear();
         spawnNextPiece();
         System.out.println("[GameEngine] Oyun başladı.");
     }
 
-    /** Oyunu duraklat / devam et */
-    public void togglePause() {
+    public void pause() {
         if (!gameRunning) return;
-        gamePaused = !gamePaused;
-        System.out.println("[GameEngine] " + (gamePaused ? "Duraklatıldı." : "Devam ediyor."));
+        gamePaused = true;
+        System.out.println("[GameEngine] Duraklatıldı.");
     }
 
-    /** Oyunu bitir */
+    public void resume() {
+        if (!gameRunning) return;
+        gamePaused = false;
+        System.out.println("[GameEngine] Devam ediyor.");
+    }
+
+    public void togglePause() {
+        if (gamePaused) resume(); else pause();
+    }
+
     public void endGame() {
         gameRunning = false;
         System.out.println("[GameEngine] Oyun bitti. Son skor: " + board.getScore());
+
+        notifyListeners(new GameEvent(GameEvent.EventType.GAME_OVER, board.getScore()));
     }
 
-    /**
-     * Tek oyun adımı (tick).
-     * Oyun döngüsü her frame bu metodu çağırır.
-     *
-     * @return false → oyun bitti (game over)
-     */
     public boolean tick() {
         if (!gameRunning || gamePaused) return gameRunning;
 
         tickCount++;
 
-        // Yerçekimi hızına göre parçayı düşür
         int dropInterval = gravity.getDropInterval(board.getLevel());
         if (tickCount % dropInterval == 0) {
             boolean moved = moveCurrentPieceDown();
@@ -121,10 +121,8 @@ public class GameEngine {
             }
         }
 
-        // Tahta küçültme kontrolü (Dynamic Shrinking)
         board.shrinkBoard();
 
-        // Game Over kontrolü
         if (board.isGameOver()) {
             endGame();
             return false;
@@ -133,9 +131,6 @@ public class GameEngine {
         return true;
     }
 
-    // ============================================================ Hareket API
-
-    /** Aktif parçayı sola kaydır */
     public boolean moveLeft() {
         if (currentPiece == null || !gameRunning || gamePaused) return false;
         int newCol = currentPiece.getCol() - 1;
@@ -148,7 +143,6 @@ public class GameEngine {
         return false;
     }
 
-    /** Aktif parçayı sağa kaydır */
     public boolean moveRight() {
         if (currentPiece == null || !gameRunning || gamePaused) return false;
         int newCol = currentPiece.getCol() + 1;
@@ -161,16 +155,11 @@ public class GameEngine {
         return false;
     }
 
-    /** Aktif parçayı bir adım aşağı kaydır */
     public boolean moveDown() {
         if (currentPiece == null || !gameRunning || gamePaused) return false;
         return moveCurrentPieceDown();
     }
 
-    /**
-     * Hard Drop — parçayı anında en alta indir.
-     * Drop skoru: her atlanan satır için +2 puan (sonraki geliştirme).
-     */
     public void hardDrop() {
         if (currentPiece == null || !gameRunning || gamePaused) return;
         int dropped = 0;
@@ -181,10 +170,6 @@ public class GameEngine {
         System.out.println("[GameEngine] Hard Drop: " + dropped + " satır düştü.");
     }
 
-    /**
-     * Aktif parçayı saat yönünde döndür.
-     * Rotation Counter: canRotate() false ise döndürülmez.
-     */
     public boolean rotatePiece() {
         if (currentPiece == null || !gameRunning || gamePaused) return false;
         if (!currentPiece.canRotate()) {
@@ -196,23 +181,16 @@ public class GameEngine {
         rotated.rotate();
         if (board.canPlace(rotated.getMatrix(),
                            currentPiece.getRow(), currentPiece.getCol())) {
-            currentPiece.rotate();   // orijinali döndür
+            currentPiece.rotate();   
             return true;
         }
-        return false;   // duvar pozisyonunda döndürülemiyor
+        return false;   
     }
 
-    // ============================================================ Custom Piece
-
-    /** CustomPieceLoader'ı döndür (kullanıcı parçası eklemek için) */
     public CustomPieceLoader getCustomPieceLoader() {
         return customPieceLoader;
     }
 
-    /**
-     * Bir sonraki parçayı custom havuzdan seç.
-     * Havuz boşsa standart rastgele parça kullanılır.
-     */
     public void useNextCustomPiece() {
         if (customPieceLoader.getLoadedCount() > 0) {
             int idx = (int)(Math.random() * customPieceLoader.getLoadedCount());
@@ -222,12 +200,6 @@ public class GameEngine {
         }
     }
 
-    // ============================================================ Bridge: Gravity
-
-    /**
-     * Yerçekimi implementorunu runtime'da değiştir (Bridge deseni).
-     * Oyun devam ederken çağrılabilir.
-     */
     public void setGravityImplementor(GravityImplementor impl) {
         gravity.setImplementor(impl);
         System.out.println("[GameEngine] Gravity değiştirildi: " +
@@ -235,8 +207,6 @@ public class GameEngine {
     }
 
     public GravityAbstraction getGravity() { return gravity; }
-
-    // ============================================================ Getters
 
     public Board   getBoard()        { return board; }
     public Piece   getCurrentPiece() { return currentPiece; }
@@ -246,24 +216,19 @@ public class GameEngine {
     public int     getTickCount()    { return tickCount; }
     public ThemeManager getThemeManager() { return themeManager; }
 
-    // ============================================================ Private
-
-    /** Sıradaki parçayı aktif yap, yenisini üret */
     private void spawnNextPiece() {
         currentPiece = nextPiece;
-        // Başlangıç konumu: üst-orta
+
         currentPiece.setRow(0);
         currentPiece.setCol(board.getGrid().getCols() / 2
                             - currentPiece.getMatrix()[0].length / 2);
         board.setCurrentPieceRow(currentPiece.getRow());
         board.setCurrentPieceCol(currentPiece.getCol());
 
-        // Sonraki parçayı belirle
         nextPiece = PieceFactory.createRandomPiece();
         System.out.println("[GameEngine] Yeni parça: " + currentPiece.getPieceName());
     }
 
-    /** Parçayı bir satır aşağı indir */
     private boolean moveCurrentPieceDown() {
         int newRow = currentPiece.getRow() + 1;
         if (board.canPlace(currentPiece.getMatrix(), newRow, currentPiece.getCol())) {
@@ -274,25 +239,34 @@ public class GameEngine {
         return false;
     }
 
-    /** Parçayı kilitle, satırları temizle, yenisini üret */
     private void lockAndSpawn() {
         board.lockPiece(currentPiece.getMatrix(), currentPiece.getColorId());
+
+        notifyListeners(new GameEvent(GameEvent.EventType.PIECE_LANDED, 0));
+
         int cleared = board.clearLines();
         if (cleared > 0) {
             System.out.println("[GameEngine] " + cleared +
                                " satır temizlendi. Skor: " + board.getScore());
+
+            notifyListeners(new GameEvent(GameEvent.EventType.LINE_CLEARED, cleared));
         }
+
+        int newLevel = board.getLevel();
+        if (newLevel > 1 && cleared > 0) {
+            notifyListeners(new GameEvent(GameEvent.EventType.LEVEL_UP, newLevel));
+        }
+
         currentPiece = null;
         spawnNextPiece();
     }
-
-    // ============================================================ Debug
 
     @Override
     public String toString() {
         return "GameEngine [Tick:" + tickCount +
                " | Running:" + gameRunning +
                " | Paused:" + gamePaused +
+               " | State:" + currentState.getClass().getSimpleName() +
                " | " + board + "]";
     }
 }

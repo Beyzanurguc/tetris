@@ -2,31 +2,24 @@ package bridge.theme;
 
 import core.Cell;
 
-/**
- * ClassicThemeImpl — Klasik Siyah/Beyaz Tetris Teması.
- *
- * ANSI renk kodu kullanmaz; sade ASCII karakterlerle çalışır.
- * En düşük sistem gereksinimi — her terminalde çalışır.
- */
 public class ClassicThemeImpl implements ThemeImplementor {
 
-    // Parça harflerine göre basit ASCII etiketler
     private static final String[] LABELS = {
-        "  ",   // 0 - boş
-        "II",   // 1 - I
-        "OO",   // 2 - O
-        "TT",   // 3 - T
-        "SS",   // 4 - S
-        "ZZ",   // 5 - Z
-        "LL",   // 6 - L
-        "JJ",   // 7 - J
-        "CC",   // 8 - Custom
-        "PP",   // 9 - Portal
-        "**",   // 10- PowerUp
+        "  ",   
+        "II",   
+        "OO",   
+        "TT",   
+        "SS",   
+        "ZZ",   
+        "LL",   
+        "JJ",   
+        "CC",   
+        "PP",   
+        "**",   
     };
 
     @Override
-    public String getColorCode(int colorId)  { return ""; }   // ANSI yok
+    public String getColorCode(int colorId)  { return ""; }   
 
     @Override
     public String getBackgroundCode()        { return ""; }

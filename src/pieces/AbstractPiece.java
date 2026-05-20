@@ -1,39 +1,19 @@
 package pieces;
 
-import core.Cell;
+import core.Board;
 import core.Matrix;
 
-/**
- * AbstractPiece — Tüm Tetris parçalarının ortak davranışını barındıran
- * soyut temel sınıf.
- *
- * Alt sınıfların sadece şunları sağlaması yeterlidir:
- *   1. initialMatrix() — başlangıç int[][] yap
- *   2. getColorId()    — renk sabiti
- *   3. getPieceName()  — sembolik ad
- *   4. clonePiece()    — Prototype kopyası
- *
- * Rotation Counter:
- *   maxRotations = 4 (tüm parçalar dört yönde dönebilir).
- *   Her rotate() çağrısı usedRotations'ı bir artırır.
- *   canRotate() → usedRotations < maxRotations kontrolünü yapar.
- *
- *   NOT: Bazı parçalar (O-parçası) maxRotations = 1 ile override edebilir.
- */
 public abstract class AbstractPiece implements Piece {
 
-    // ------------------------------------------------------------ rotasyon
     protected static final int DEFAULT_MAX_ROTATIONS = 4;
 
-    protected Matrix matrix;          // güncel rotasyondaki form
-    protected int    maxRotations;    // bu parça için izin verilen toplam dönüş
-    protected int    usedRotations;   // şimdiye kadar yapılan dönüş
+    protected Matrix matrix;          
+    protected int    maxRotations;    
+    protected int    usedRotations;   
 
-    // ------------------------------------------------------------ konum
     protected int row;
     protected int col;
 
-    // ------------------------------------------------------------ ctor
     protected AbstractPiece(int maxRotations) {
         this.maxRotations  = maxRotations;
         this.usedRotations = 0;
@@ -46,15 +26,38 @@ public abstract class AbstractPiece implements Piece {
         this(DEFAULT_MAX_ROTATIONS);
     }
 
-    // ------------------------------------------------------------ soyut
-    /** Alt sınıf başlangıç formunu tanımlar */
     protected abstract int[][] initialMatrix();
 
-    // ------------------------------------------------------------ Piece impl
+    public final void update(Board board) {
+        applyGravity();
+        if (checkCollision(board)) {
+            lock(board);
+            onLocked(board);
+        }
+    }
+
+    protected void applyGravity() {
+        this.row += 1;
+    }
+
+    protected boolean checkCollision(Board board) {
+        return !board.canPlace(getMatrix(), this.row, this.col);
+    }
+
+    protected void lock(Board board) {
+        this.row -= 1;   
+        board.lockPiece(getMatrix(), getColorId());
+        System.out.println("[" + getPieceName() + "-Piece] Kilitlendi ("
+                           + this.row + "," + this.col + ")");
+    }
+
+    protected void onLocked(Board board) {
+
+    }
 
     @Override
     public int[][] getMatrix() {
-        // int[][] olarak ham kopya döndür (bağımlılığı koparmak için)
+
         int[][] result = new int[matrix.getRows()][matrix.getCols()];
         for (int r = 0; r < matrix.getRows(); r++) {
             for (int c = 0; c < matrix.getCols(); c++) {
@@ -67,12 +70,12 @@ public abstract class AbstractPiece implements Piece {
     @Override
     public Piece rotate() {
         if (!canRotate()) {
-            System.out.println("[" + getPieceName() + "] Rotasyon hakkı kalmadı!");
+            System.out.println("[" + getPieceName() + "] Rotasyon hakki kalmadi!");
             return this;
         }
         matrix = matrix.rotateCW();
         usedRotations++;
-        System.out.println("[" + getPieceName() + "] Döndürüldü. Kalan hak: " +
+        System.out.println("[" + getPieceName() + "] Donduruldu. Kalan hak: " +
                            getRemainingRotations());
         return this;
     }
@@ -92,15 +95,11 @@ public abstract class AbstractPiece implements Piece {
         return usedRotations;
     }
 
-    // ------------------------------------------------------------ konum
     @Override public int  getRow()       { return row; }
     @Override public int  getCol()       { return col; }
     @Override public void setRow(int r)  { this.row = r; }
     @Override public void setCol(int c)  { this.col = c; }
 
-    // ------------------------------------------------------------ yardımcı
-
-    /** Alt sınıfların clonePiece() içinde kullanabileceği ortak kopyalama */
     protected void copyStateTo(AbstractPiece target) {
         target.matrix        = this.matrix.clone();
         target.usedRotations = this.usedRotations;

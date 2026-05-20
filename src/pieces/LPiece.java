@@ -2,13 +2,6 @@ package pieces;
 
 import core.Cell;
 
-/**
- * LPiece — L parçası (Orange)
- *
- *  [ ]
- *  [ ]
- *  [ ][ ]
- */
 public class LPiece extends AbstractPiece {
 
     public LPiece() {

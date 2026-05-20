@@ -2,16 +2,10 @@ package pieces;
 
 import core.Cell;
 
-/**
- * SPiece — S parçası (Green)
- *
- *     [ ][ ]
- *  [ ][ ]
- */
 public class SPiece extends AbstractPiece {
 
     public SPiece() {
-        super(2);   // 2 benzersiz rotasyon (0° ve 90°)
+        super(2);   
     }
 
     @Override
